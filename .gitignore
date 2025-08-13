@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+venv/
+*.log
+logs/
+status.json
+sensor_log.csv
+lux_log.json
+*.jpg
+*.jpeg

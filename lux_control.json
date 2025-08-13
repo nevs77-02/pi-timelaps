@@ -1,0 +1,34 @@
+{
+  "enabled": true,
+  "check_interval_s": 60,
+  "switch_delay_s": 300,
+  "cooldown_s": 900,
+  "sensor_log_csv": "sensor_log.csv",
+  "sensor_lux_column": "veml_autolux",
+  "presets_dir": "/mnt/hdd/timelapse/presets",
+  "tlctl": [
+    "python3",
+    "tlctl.py"
+  ],
+  "force_preset": null,
+  "mappings": [
+    {
+      "name": "night",
+      "min_lux": 0.0,
+      "max_lux": 3.0,
+      "preset": "night"
+    },
+    {
+      "name": "twilight",
+      "min_lux": 3.0,
+      "max_lux": 50.0,
+      "preset": "twilight"
+    },
+    {
+      "name": "day",
+      "min_lux": 50.0,
+      "max_lux": 120000.0,
+      "preset": "day"
+    }
+  ]
+}

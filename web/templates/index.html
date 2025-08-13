@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Timelapse Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<header class="topbar">
+    <div class="header-row">
+        <div class="header-title">
+            <h1>Timelapse Control</h1>
+            <span id="status-session" class="badge"></span>
+            <span id="status-session-tlctl" class="badge"></span>
+</div>
+
+      <div class="header-controls">
+    <button id="btn-start" class="btn-start" title="Session starten">▶️ Start</button>
+    <button id="btn-stop" class="btn-stop" title="Session stoppen">⏹ Stop</button>
+    <button id="btn-testshot" class="btn-testshot" title="Testbild">📸 Testbild</button>
+</div>
+            <div id="overview-img-block">
+                <img id="overview-thumb" src="" alt="Kein Bild" />
+                <a id="overview-full" href="#" target="_blank">JPEG öffnen</a>
+                <span id="overview-raw"></span>
+            </div>
+            <button id="btn-start-tlctl" class="btn-start" title="Session (tlctl) starten"> ▶️ Start Lux controller </button>
+            <button id="btn-stop-tlctl" class="btn-stop" title="Session (tlctl) stoppen"> ⏹ Stop Lux controller </button>
+
+        </div>
+    </div>
+</header>
+
+
+    <div id="toast"></div>
+
+    <nav class="tabs">
+        <button class="tab-btn active" data-tab="config">Einstellungen</button>
+        <button class="tab-btn" data-tab="video">Video</button>
+        <button class="tab-btn" data-tab="sensoren">Sensoren</button>
+        <button class="tab-btn" data-tab="lux">Lux</button>
+        <button class="tab-btn" data-tab="logs">Logs</button>
+        <button class="tab-btn" data-tab="gallery">Dateien</button>
+    </nav>
+
+    <section class="tab-content">
+
+
+        
+        <div class="tab-panel active" id="tab-config">
+            <h2>Einstellungen</h2>
+
+<div class="preset-controls">
+  <label>Preset:
+    <select id="preset-list"></select>
+  </label>
+  <button type="button" id="preset-load">Laden</button>
+  <button type="button" id="preset-save">Speichern als</button>
+  <button type="button" id="preset-delete">Löschen</button>
+  <input type="text" id="preset-name" placeholder="Name für neues Preset">
+</div>
+
+<form id="config-form">
+  <div class="camera-select-row">
+    <label for="camera-select">📷 Kameramodell:</label>
+    <select name="camera_id" id="camera-select">
+      {% for cam in camera_list %}
+        <option value="{{ cam['model'] }}" {% if cfg['camera_id'] == cam['model'] %}selected{% endif %}>
+          {{ cam['model'] }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+{% for group_label, field_names in field_groups %}
+  <div class="config-group">
+    <h3>{{ group_label }}</h3>
+    {% for k in field_names %}
+      {% if k in cfg %}
+        {% if k in slider_options %}
+          <label>{{ field_labels.get(k, k) }}:
+            <input type="range"
+                   name="{{ k }}"
+                   min="{{ slider_options[k]['min'] }}"
+                   max="{{ slider_options[k]['max'] }}"
+                   step="{{ slider_options[k]['step'] }}"
+                   value="{{ cfg[k] }}"
+                   oninput="document.getElementById('{{ k }}_val').innerText = this.value">
+            <span id="{{ k }}_val">{{ cfg[k] }}</span>
+          </label>
+        {% elif k in dropdown_options %}
+          <label>{{ field_labels.get(k, k) }}:
+            <select name="{{ k }}">
+              {% for opt in dropdown_options[k] %}
+                <option value="{{ opt }}" {% if cfg[k] == opt or cfg[k]|string == opt|string %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% elif k in checkbox_fields %}
+          <label>{{ field_labels.get(k, k) }}:
+            <input type="checkbox" name="{{ k }}" {% if cfg[k] %}checked{% endif %}>
+          </label>
+        {% else %}
+          <label>{{ field_labels.get(k, k) }}:
+            <input type="text" name="{{ k }}" value="{{ cfg[k] }}">
+          </label>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endfor %}
+<div class="config-group">
+  <h3>Systempfade (nur Anzeige)</h3>
+  {% for k in display_only_fields %}
+    {% if k in cfg %}
+      <label>{{ field_labels.get(k, k) }}:
+        <input type="text" name="{{ k }}" value="{{ cfg[k] }}" readonly>
+      </label>
+    {% endif %}
+  {% endfor %}
+</div>
+  <button type="submit" id="config-save">Speichern</button>
+</form>
+
+            <div id="config-hint" class="hint"></div>
+        <div id="config-info" class="info-box">
+            <div class="info-block" id="info-block">
+    <h3>Felder & Hinweise</h3>
+    <ul>
+        {% for k, v in cfg.items() %}
+            <li>
+                <strong>{{ field_labels.get(k, k) }}:</strong>
+                {{ field_infos.get(k, "Keine Info verfügbar.") }}
+            </li>
+        {% endfor %}
+    </ul>
+    </div>
+</div>
+
+        </div>
+<div class="tab-panel" id="tab-lux">
+  <h2>Lux-Automatik</h2>
+  <div class="config-group">
+    <label>
+      <span>Automatik aktiv</span>
+      <input type="checkbox" id="lux-enabled">
+    </label>
+    <label>
+      <span>Check-Intervall (s)</span>
+      <input type="number" id="lux-ci" min="1" step="1">
+    </label>
+    <label>
+      <span>Switch-Delay (s) – Mittelungsfenster</span>
+      <input type="number" id="lux-sd" min="1" step="1">
+    </label>
+    <label>
+      <span>Cooldown (s)</span>
+      <input type="number" id="lux-cd" min="1" step="1">
+    </label>
+    <label>
+      <span>CSV-Datei</span>
+      <input type="text" id="lux-csv" readonly>
+    </label>
+    <label>
+      <span>Lux-Spalte</span>
+      <input type="text" id="lux-col">
+    </label>
+  </div>
+
+  <div class="config-group">
+    <h3>Mappings (Lux → Preset)</h3>
+    <div id="lux-map-list"></div>
+    <button class="btn" id="lux-map-add">Mapping hinzufügen</button>
+  </div>
+
+  <div class="config-group">
+    <h3>Manual Override</h3>
+    <div class="center">
+      <select id="force-preset"></select>
+      <button class="btn" id="btn-force-apply">Preset erzwingen</button>
+      <button class="btn" id="btn-force-clear">Override aufheben</button>
+    </div>
+  </div>
+
+  <div class="config-group">
+    <button class="btn" id="lux-save">Lux-Konfiguration speichern</button>
+  </div>
+
+  <div class="config-group">
+    <h3>Lux-Log (letzte Einträge)</h3>
+    <pre id="lux-log"></pre>
+  </div>
+</div>
+        <div class="tab-panel" id="tab-logs">
+            <h2>Logs & Fehler</h2>
+            <div>
+                <h3>Timelapse-Log</h3>
+                <pre id="log-timelapse"></pre>
+                <a href="/download/log/timelapse" target="_blank">Log herunterladen</a>
+            </div>
+        </div>
+
+        <div class="tab-panel" id="tab-gallery">
+            <h2>Galerie der letzten 10 Bilder</h2>
+            <div class="gallery-grid" id="gallery-list"></div>
+        </div>
+
+        </div>
+        <div class="tab-panel" id="tab-video">
+            <h2>Timelapse Video erstellen</h2>
+               <form id="video-form">
+               <label>Ordner wählen:
+               <select name="folder" id="video-folder"></select>
+               </label>
+               <label>FPS:
+               <select name="fps">
+                <option>12</option><option>24</option><option>25</option><option>30</option><option>60</option>
+                </select>
+               </label>
+               <label>Auflösung:
+               <select name="resolution">
+               <option value="1920x1080">1920x1080 (FullHD)</option>
+               <option value="3840x2160">3840x2160 (4K)</option>
+               <option value="1280x720">1280x720 (HD)</option>
+               <option value="original">Originalgröße</option>
+               </select>
+               </label>
+              <button type="submit">Video erstellen</button>
+              </form>
+              <div id="video-result"></div>
+
+        </div>
+        </div>
+        <div class="tab-panel" id="tab-sensoren">
+            <h2>Sensoren</h2>
+<div class="center" style="margin-bottom:10px">
+  <button id="btn-charts-reload" class="btn">Diagramme aktualisieren</button>
+</div>
+<iframe id="charts-frame"
+        class="charts-iframe"
+        src="{{ url_for('static', filename='charts.html') }}"
+        loading="lazy"></iframe>
+
+        </div>
+    </section>
+
+    <footer>
+        <span>Timelapse Pi &copy; {{ thisyear }}</span>
+    </footer>
+
+    <script>
+        // Tabswitching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            }
+        });
+
+        // Helper: Toast
+        function showToast(msg, isErr=false) {
+            let toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = isErr ? "error" : "ok";
+            toast.style.display = "block";
+            setTimeout(()=>{toast.style.display="none"}, 2500);
+        }
+
+        async function getJSON(url) {
+            let res = await fetch(url);
+            if (res.ok) return await res.json();
+            else throw await res.json();
+        }
+        async function postJSON(url, data) {
+            let res = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data)});
+            if (res.ok) return await res.json();
+            else throw await res.json();
+        }
+
+        // Status/Live-Infos updaten
+        async function updateStatus() {
+            try {
+                let st = await getJSON('/api/status');
+                document.getElementById('status-session').innerText = st.running ? "Timelapse läuft" : "Gestoppt";
+                document.getElementById('status-session').className = "badge " + (st.running ? "run" : "stop");
+                document.getElementById('live-indicator').innerText = st.running ? "●" : "";
+                document.getElementById('current-image-info').innerText = st.last_file ? st.last_file : "";
+                document.getElementById('ov-mode').innerText = st.mode;
+                document.getElementById('ov-shot').innerText = st.current_shot || "-";
+                document.getElementById('ov-lastfile').innerText = st.last_file || "-";
+                document.getElementById('ov-lasttime').innerText = st.last_time || "-";
+                RUN_LEGACY = !!st.running;
+                applyButtonLocks()
+            } catch(e) {}
+        }
+
+        async function updateLastImage() {
+            let data = await getJSON('/api/lastimage');
+            if(data.thumb) {
+                document.getElementById('overview-thumb').src = data.thumb;
+                document.getElementById('overview-full').href = data.full;
+                document.getElementById('overview-full').style.display = "inline";
+                document.getElementById('ov-shutter').innerText = data.meta && data.meta.shutter ? data.meta.shutter : "-";
+                document.getElementById('ov-gain').innerText = data.meta && data.meta.gain ? data.meta.gain : "-";
+                document.getElementById('ov-awr').innerText = data.meta && data.meta.awb_r ? data.meta.awb_r : "-";
+                document.getElementById('ov-awb').innerText = data.meta && data.meta.awb_b ? data.meta.awb_b : "-";
+            }
+            if(data.raw) {
+                document.getElementById('overview-raw').innerHTML = `<a href="${data.raw}" target="_blank">RAW</a>`;
+            } else {
+                document.getElementById('overview-raw').innerHTML = "";
+            }
+
+            let info = "";
+            if (data.meta) {
+                if (data.meta.shutter) info += `Shutter: ${data.meta.shutter} µs `;
+                if (data.meta.gain)    info += `| Gain: ${data.meta.gain} `;
+                if (data.meta.awb_r && data.meta.awb_b) info += `| AWB: R=${data.meta.awb_r} B=${data.meta.awb_b} `;
+            }
+            document.getElementById('current-image-info').innerText = info.trim();
+        }
+
+        document.getElementById('config-form').onsubmit = async function(e){
+            e.preventDefault();
+            let data = {};
+            Array.from(this.elements).forEach(f=>{
+                if(!f.name) return;
+                if(f.type === "checkbox") data[f.name] = f.checked;
+                else if(f.name === "resolution") {
+                    let parts = f.value.split("x");
+                    data[f.name] = [parseInt(parts[0]), parseInt(parts[1])];
+                }
+                else data[f.name] = f.value;
+            });
+            
+            try {
+                await postJSON('/api/config', data);
+                showToast("Einstellungen gespeichert!");
+                location.reload();
+            } catch(err){
+                showToast(err.error||"Fehler!", true);
+            }
+        };
+
+// --- START (Legacy) ---
+document.getElementById('btn-start').onclick = async ()=>{
+  const b = document.getElementById('btn-start');
+  if (b.disabled) return;
+  try{
+    await postJSON('/api/session', {action:"start"});
+    RUN_LEGACY = true;            // sofort sperren
+    applyButtonLocks();
+    showToast("Session gestartet!");
+  }catch(err){
+    showToast(err.error || "Start fehlgeschlagen", true);
+  }
+  updateStatus();
+};
+
+// --- START (tlctl -> main2.py) ---
+document.getElementById('btn-start-tlctl').onclick = async ()=>{
+  const b = document.getElementById('btn-start-tlctl');
+  if (b.disabled) return;
+  try{
+    await postJSON('/api/session_tlctl', {action: 'start'});
+    RUN_TLCTL = true;             // sofort sperren
+    applyButtonLocks();
+    showToast('tlctl gestartet!');
+  }catch(err){
+    showToast(err.error || 'Start fehlgeschlagen', true);
+  }
+  updateStatusTlctl();
+};
+
+
+document.getElementById('btn-testshot').onclick = async ()=>{
+  if (document.getElementById('btn-testshot').disabled) return;
+  await postJSON('/api/testshot', {});
+  showToast("Testbild aufgenommen!");
+};
+
+
+        async function updateGallery() {
+            let data = await getJSON('/api/gallery');
+            let html = data.map(img => `
+                <div class="gallery-item">
+                    <img src="${img.thumb}" alt="${img.filename}" />
+                    <div class="meta">
+                        ${img.filename}<br>${img.mtime}<br>
+                        <a href="${img.full}" target="_blank">JPEG</a>
+                        ${img.raw ? `<a href="${img.raw}" target="_blank">RAW</a>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('gallery-list').innerHTML = html;
+        }
+
+        async function updateLogs() {
+            let l = await getJSON('/api/log');
+            document.getElementById('log-timelapse').innerText = l.lines.join('');
+        }
+
+        async function updateSys() {
+            let s = await getJSON('/api/sysinfo');
+            document.getElementById('sys-host').innerText = s.hostname;
+            document.getElementById('sys-time').innerText = s.time;
+            document.getElementById('sys-disk').innerText = s.disk_mb;
+            document.getElementById('sys-py').innerText = s.python.split(' ')[0];
+            document.getElementById('sys-project').innerText = s.project;
+        }
+
+        function allUpdate(){
+            updateStatus();
+            updateLastImage();
+            updateGallery();
+            updateLogs();
+            updateSys();
+
+
+        }
+        allUpdate();
+        setInterval(allUpdate, 7000);
+// Video-Folder laden
+async function updateVideoFolders() {
+    let folders = await getJSON('/api/video_folders');
+    let sel = document.getElementById('video-folder');
+    sel.innerHTML = folders.map(f=>`<option value="${f}">${f}</option>`).join('');
+}
+updateVideoFolders();
+
+document.getElementById('video-form').onsubmit = async function(e){
+    e.preventDefault();
+    let data = {};
+    Array.from(this.elements).forEach(f=>{
+        if(!f.name) return;
+        data[f.name] = f.value;
+    });
+    if(data.resolution === "original") delete data.resolution;
+    document.getElementById('video-result').innerHTML = "Video wird erstellt... Bitte warten!";
+    try {
+        let res = await postJSON('/api/create_video', data);
+        if(res.success) {
+            document.getElementById('video-result').innerHTML =
+              `<a href="/download/video/${res.video}" target="_blank">Video herunterladen (${res.video})</a>`;
+        } else {
+            document.getElementById('video-result').innerText = "Fehler: " + res.error;
+        }
+    } catch(err){
+        document.getElementById('video-result').innerText = "Fehler: " + (err.error||err);
+    }
+};
+async function updatePresetList() {
+    let presets = await getJSON('/api/presets');
+    let sel = document.getElementById('preset-list');
+    sel.innerHTML = presets.map(p=>`<option value="${p}">${p}</option>`).join('');
+}
+updatePresetList();
+
+document.getElementById('preset-load').onclick = async function() {
+    let name = document.getElementById('preset-list').value;
+    let preset = await getJSON('/api/preset/' + name);
+    // Setze alle Formularfelder auf Presetwerte:
+    Object.entries(preset).forEach(([k,v])=>{
+        let f = document.querySelector(`[name="${k}"]`);
+        if(!f) return;
+        if(f.type==="checkbox") f.checked = !!v;
+        else if(f.type==="range" || f.type==="text") f.value = v;
+        else if(f.tagName==="SELECT") f.value = v;
+    });
+    showToast("Preset geladen: " + name);
+};
+
+document.getElementById('preset-save').onclick = async function() {
+    let name = document.getElementById('preset-name').value.trim();
+    if(!name) return showToast("Preset-Name eingeben!", true);
+    let data = {};
+    Array.from(document.getElementById('config-form').elements).forEach(f=>{
+        if(!f.name) return;
+        if(f.type==="checkbox") data[f.name] = f.checked;
+        else if(f.name==="resolution") {
+            let parts = f.value.split("x");
+            data[f.name] = [parseInt(parts[0]), parseInt(parts[1])];
+        } else data[f.name] = f.value;
+    });
+    await postJSON('/api/preset/' + name, data);
+    showToast("Preset gespeichert!");
+    updatePresetList();
+};
+
+document.getElementById('preset-delete').onclick = async function() {
+    let name = document.getElementById('preset-list').value;
+    if(!confirm(`Preset "${name}" wirklich löschen?`)) return;
+    await fetch('/api/preset/' + name, {method: "DELETE"});
+    showToast("Preset gelöscht!");
+    updatePresetList();
+};
+
+
+async function updateCameraSelect() {
+    let res = await fetch('/api/cameras');
+    let models = await res.json();
+    let sel = document.getElementById('camera-select');
+    if (!sel) return;
+    sel.innerHTML = models.map(model => 
+      `<option value="${model}">${model}</option>`
+    ).join('');
+    // Optional: aktuellen Wert setzen
+    let current = "{{ cfg['camera_id']|default('') }}";
+    if (current) sel.value = current;
+}
+updateCameraSelect();
+const chartsBtn = document.getElementById('btn-charts-reload');
+if (chartsBtn) {
+  chartsBtn.onclick = () => {
+    const f = document.getElementById('charts-frame');
+    if (f) f.src = f.src.split('?')[0] + '?t=' + Date.now(); // Cache-Buster
+  };
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const panel = document.getElementById('tab-' + btn.dataset.tab);
+    panel.classList.add('active');
+
+    // NEU: beim Öffnen von „sensoren“ Charts neu laden
+    if (btn.dataset.tab === 'sensoren') {
+      const f = document.getElementById('charts-frame');
+      if (f) f.src = f.src.split('?')[0] + '?t=' + Date.now();
+    }
+  };
+});
+
+
+document.querySelectorAll('.remove-mapping').forEach(btn => {
+    btn.onclick = (e) => e.target.closest('.mapping-entry').remove();
+});
+
+// ... (vorhandener Code)
+allUpdate();
+setInterval(() => {
+    allUpdate();
+    updateLuxLog();
+    updateStatusTlctl();
+}, 7000);
+
+// --- Lux Frontend ---
+function mappingRow(m){
+  return `
+    <div class="mapping-entry" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0;align-items:center;">
+      <input type="number" step="0.01" class="map-min" placeholder="min_lux" value="${m.min_lux||0}">
+      <input type="number" step="0.01" class="map-max" placeholder="max_lux" value="${m.max_lux||0}">
+      <input type="text" class="map-preset" placeholder="preset" value="${m.preset||''}">
+      <button type="button" class="remove-mapping">Entfernen</button>
+    </div>`;
+}
+
+async function loadLuxConfig(){
+  const cfg = await getJSON('/api/lux_config');
+  document.getElementById('lux-enabled').checked = !!cfg.enabled;
+  document.getElementById('lux-ci').value = cfg.check_interval_s||60;
+  document.getElementById('lux-sd').value = cfg.switch_delay_s||300;
+  document.getElementById('lux-cd').value = cfg.cooldown_s||900;
+  document.getElementById('lux-csv').value = cfg.sensor_log_csv||'';
+  document.getElementById('lux-col').value = cfg.sensor_lux_column||'veml_autolux';
+
+  // Mapping-Liste
+  const list = document.getElementById('lux-map-list');
+  list.innerHTML = (cfg.mappings||[]).map(mappingRow).join('');
+  list.querySelectorAll('.remove-mapping').forEach(btn=>{
+    btn.onclick = (e)=> e.target.closest('.mapping-entry').remove();
+  });
+
+  // Force-Preset-Auswahl aus Presetliste
+  const presets = await getJSON('/api/presets');
+  const sel = document.getElementById('force-preset');
+  sel.innerHTML = `<option value="">(keins)</option>` + presets.map(p=>`<option value="${p}">${p}</option>`).join('');
+  if(cfg.force_preset){ sel.value = cfg.force_preset; }
+}
+
+async function saveLuxConfig(){
+  const mappings = Array.from(document.querySelectorAll('#lux-map-list .mapping-entry')).map(div=>({
+    min_lux: parseFloat(div.querySelector('.map-min').value),
+    max_lux: parseFloat(div.querySelector('.map-max').value),
+    preset: div.querySelector('.map-preset').value.trim()
+  })).filter(m=>!Number.isNaN(m.min_lux)&&!Number.isNaN(m.max_lux)&&m.preset);
+
+  const payload = {
+    enabled: document.getElementById('lux-enabled').checked,
+    check_interval_s: parseInt(document.getElementById('lux-ci').value||60),
+    switch_delay_s: parseInt(document.getElementById('lux-sd').value||300),
+    cooldown_s: parseInt(document.getElementById('lux-cd').value||900),
+    sensor_log_csv: document.getElementById('lux-csv').value,
+    sensor_lux_column: document.getElementById('lux-col').value,
+    mappings
+  };
+  await postJSON('/api/lux_config', payload);
+  showToast('Lux-Konfiguration gespeichert');
+}
+
+async function updateLuxLog(){
+  try{
+    const log = await getJSON('/api/lux_log');
+    const lines = (log||[]).map(e=>`[${e.time}] avg=${e.avg_lux} preset=${e.preset||'-'} note=${e.note||''}`);
+    document.getElementById('lux-log').innerText = lines.join('\n');
+  }catch(e){ /* no-op */ }
+}
+
+// Buttons verdrahten
+const luxAdd = document.getElementById('lux-map-add');
+if(luxAdd){ luxAdd.onclick = ()=>{
+  const list = document.getElementById('lux-map-list');
+  list.insertAdjacentHTML('beforeend', mappingRow({min_lux:0, max_lux:1, preset:''}));
+  list.querySelectorAll('.remove-mapping').forEach(btn=>{
+    btn.onclick = (e)=> e.target.closest('.mapping-entry').remove();
+  });
+}; }
+
+const luxSave = document.getElementById('lux-save');
+if(luxSave){ luxSave.onclick = saveLuxConfig; }
+
+const forceBtn = document.getElementById('btn-force-apply');
+if(forceBtn){ forceBtn.onclick = async ()=>{
+  const p = document.getElementById('force-preset').value || null;
+  await postJSON('/api/lux_apply', {preset:p});
+  showToast(p?('Override: '+p):'Override aufgehoben');
+}; }
+
+const forceClr = document.getElementById('btn-force-clear');
+if(forceClr){ forceClr.onclick = async ()=>{
+  await postJSON('/api/lux_apply', {preset:null});
+  document.getElementById('force-preset').value = '';
+  showToast('Override aufgehoben');
+}; }
+
+// Initial laden
+loadLuxConfig();
+updateLuxLog();
+
+function renderTlctlBadge(running){
+  const el = document.getElementById('status-session-tlctl');
+  if(!el) return;
+  el.textContent = running ? 'Lux: läuft' : 'Lux: stopp';
+  el.classList.toggle('ok', !!running);   // .ok existiert in deinem CSS
+}
+
+async function updateStatusTlctl(){
+  try{
+    const st = await getJSON('/api/status_tlctl');
+    RUN_TLCTL = !!st.running;
+    renderTlctlBadge(RUN_TLCTL);
+  }catch(e){
+    RUN_TLCTL = false;
+    renderTlctlBadge(false);
+  }
+  applyButtonLocks();
+}
+
+// --- RUN-Locks (neu) ---
+let RUN_LEGACY = false;
+let RUN_TLCTL  = false;
+
+function applyButtonLocks(){
+  const any = RUN_LEGACY || RUN_TLCTL;
+  const b1 = document.getElementById('btn-start');       // Legacy-Start
+  const b2 = document.getElementById('btn-start-tlctl');  // tlctl-Start
+  const bt = document.getElementById('btn-testshot');     // Testbild
+  if (b1) b1.disabled = any;
+  if (b2) b2.disabled = any;
+  if (bt) bt.disabled = any;
+}
+// --- STOP (Legacy /api/session stop) ---
+document.getElementById('btn-stop').onclick = async ()=>{
+  try{
+    await postJSON('/api/session', {action:"stop"});
+    showToast("Session gestoppt!");
+  }catch(err){
+    showToast(err.error || "Stop fehlgeschlagen", true);
+  }
+  // Beide Status updaten, damit Locks/Badges stimmen
+  await updateStatus();
+  await updateStatusTlctl();
+};
+
+// --- STOP (tlctl /api/session_tlctl stop) ---
+document.getElementById('btn-stop-tlctl').onclick = async ()=>{
+  try{
+    await postJSON('/api/session_tlctl', {action:"stop"});
+    showToast("tlctl gestoppt!");
+  }catch(err){
+    showToast(err.error || "tlctl Stop fehlgeschlagen", true);
+  }
+  await updateStatusTlctl();
+  await updateStatus();
+};
+
+
+    </script>
+
+</body>
+</html>
