@@ -1,0 +1,33 @@
+{
+  "mode": "timelapse",
+  "min_interval": 13,
+  "raw_delay": 3,
+  "duration": 604800,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "camera_id": "imx708",
+  "jpeg_quality": 90,
+  "shutter": 8000000,
+  "gain": 8,
+  "ev": 0.2,
+  "ae_enable": true,
+  "awb_enable": true,
+  "awb_mode": "tungsten",
+  "awb_gain_r": 2.2,
+  "awb_gain_b": 1.8,
+  "focus": 1,
+  "noise_reduction": "high_quality",
+  "save_raw": false,
+  "raw_folder": "/mnt/hdd/timelapse/raw",
+  "test_folder": "/mnt/hdd/timelapse/tests",
+  "timelapse_folder": "/mnt/hdd/timelapse/Bilder",
+  "log_folder": "/mnt/hdd/timelapse/logs",
+  "raw_format": "raw",
+  "use_hdr": false,
+  "saturation": 2,
+  "contrast": 1,
+  "brightness": 0,
+  "sharpness": 1
+}

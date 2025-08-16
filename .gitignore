@@ -1,0 +1,17 @@
+# Laufzeit & große Daten
+sensor_log.csv
+color_log.csv
+logs/
+*.log
+*.zip
+__pycache__/
+*.pyc
+Bilder/
+videos/
+raw/
+config.json
+config_tl.json
+awb_adjuster.json
+lux_exposured.json
+lux_control.json
+status.json

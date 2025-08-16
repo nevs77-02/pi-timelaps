@@ -1,0 +1,31 @@
+{
+  "camera_id": "imx708",
+  "ae_enable": true,
+  "shutter": 80000,
+  "gain": 1,
+  "ev": 0,
+  "focus": 1,
+  "awb_enable": true,
+  "awb_mode": "auto",
+  "awb_gain_r": 2,
+  "awb_gain_b": 1.9,
+  "noise_reduction": "high_quality",
+  "saturation": 2,
+  "contrast": 1,
+  "brightness": 0,
+  "sharpness": 1,
+  "min_interval": 13,
+  "raw_delay": 3,
+  "duration": 43200,
+  "save_raw": false,
+  "jpeg_quality": 90,
+  "use_hdr": true,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "timelapse_folder": "/mnt/hdd/timelapse/Bilder",
+  "raw_folder": "/mnt/hdd/timelapse/raw",
+  "test_folder": "/mnt/hdd/timelapse/tests",
+  "log_folder": "/mnt/hdd/timelapse/logs"
+}

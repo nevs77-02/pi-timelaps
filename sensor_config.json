@@ -1,0 +1,7 @@
+{
+  "tcs_low_light_threshold_lux": 0.1,
+  "tcs_low_light_gain": 64,
+  "tcs_low_light_integration_time_ms": 614,
+  "tcs_default_gain": 4,
+  "tcs_default_integration_time_ms": 154
+}

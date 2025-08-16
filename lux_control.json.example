@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "check_interval_s": 60,
+  "switch_delay_s": 300,
+  "cooldown_s": 900,
+  "sensor_log_csv": "/home/pi/timelapse2/sensor_log.csv",
+  "sensor_lux_column": "veml_autolux",
+  "mappings": [
+    {
+      "min_lux": 0,
+      "max_lux": 2,
+      "preset": "Nacht"
+    },
+    {
+      "min_lux": 3,
+      "max_lux": 199,
+      "preset": "Nacht"
+    },
+    {
+      "min_lux": 200,
+      "max_lux": 12000000,
+      "preset": "Tag"
+    }
+  ]
+}

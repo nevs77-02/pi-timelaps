@@ -1,0 +1,100 @@
+{
+  "sensor_csv": "sensor_log.csv",
+  "sensor_column": "veml_autolux",
+  "avg_samples": 30,
+  "interval_s": 5,
+  "smoothing_et": 0.7,
+  "max_step_shutter_pct": 0.25,
+  "max_step_gain_pct": 0.25,
+  "min_write_delta_shutter_us": 500,
+  "min_write_delta_gain": 0.05,
+  "min_shutter_us": 100,
+  "max_shutter_us": 9000000,
+  "min_gain": 1,
+  "max_gain": 16,
+  "max_gain_by_camera": {
+    "imx708": 1,
+    "imx477": 12
+  },
+  "quantize_shutter_us": 10000,
+  "quantize_min_us": 8000,
+  "limit_by_interval": true,
+  "interval_overhead_s": 0.5,
+  "write_only_if_ae_off": true,
+  "hold_after_cam_switch_s": 0,
+  "max_shutter_us_by_camera": {
+    "imx477": 300000
+  },
+  "comfort_shutter_us_by_camera": {
+    "imx477": 30000
+  },
+  "tables": {
+    "imx708": [
+      {
+        "lux": 10000,
+        "et_us": 200
+      },
+      {
+        "lux": 4000,
+        "et_us": 300
+      },
+      {
+        "lux": 1500,
+        "et_us": 380
+      },
+      {
+        "lux": 1134,
+        "et_us": 400
+      },
+      {
+        "lux": 800,
+        "et_us": 600
+      },
+      {
+        "lux": 400,
+        "et_us": 1200
+      },
+      {
+        "lux": 200,
+        "et_us": 2500
+      }
+    ],
+    "imx477": [
+      {
+        "lux": 300,
+        "et_us": 40000
+      },
+      {
+        "lux": 150,
+        "et_us": 100000
+      },
+      {
+        "lux": 60,
+        "et_us": 250000
+      },
+      {
+        "lux": 20,
+        "et_us": 600000
+      },
+      {
+        "lux": 5,
+        "et_us": 1500000
+      },
+      {
+        "lux": 1,
+        "et_us": 3000000
+      },
+      {
+        "lux": 0.1,
+        "et_us": 8000000
+      }
+    ]
+  },
+  "astro_enter_lux": 0.05,
+  "astro_exit_lux": 0.1,
+  "astro_enter_hold_s": 60,
+  "astro_exit_hold_s": 60,
+  "astro_shutter_us": 8000000,
+  "astro_gain": 8,
+  "astro_min_interval_s": 60
+}

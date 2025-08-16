@@ -1,0 +1,16 @@
+[Unit]
+Description=Timelapse Web UI (Flask)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/timelapse2/web
+ExecStart=/usr/bin/python3 /home/pi/timelapse2/web/app.py
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
